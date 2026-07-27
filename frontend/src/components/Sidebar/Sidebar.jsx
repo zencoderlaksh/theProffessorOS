@@ -25,7 +25,11 @@ export default function Sidebar() {
           <Link
             key={link.path}
             to={link.path}
-            className={\lex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors \\}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+              location.pathname.startsWith(link.path)
+                ? 'bg-[#FF5D73]/10 text-[#FF5D73] border border-[#FF5D73]/20'
+                : 'text-[#7C7A7A] hover:text-white hover:bg-[#141414]'
+            }`}
           >
             {link.icon} {link.name}
           </Link>
