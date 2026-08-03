@@ -1,8 +1,10 @@
 import express from 'express';
-import { createAssignment } from '../controllers/assignment.controller.js';
+import { getAssignments, createAssignment, deleteAssignment } from '../controllers/assignment.controller.js';
 
 const router = express.Router();
 
+router.get('/', getAssignments);
 router.post('/', createAssignment);
+router.delete('/:id', deleteAssignment);
 
 export default router;

@@ -4,7 +4,7 @@ const exampleSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
-    unique: true
+    trim: true
   },
   description: {
     type: String,
@@ -14,8 +14,18 @@ const exampleSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  courseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course',
+    required: false
+  },
+  category: {
+    type: String,
+    enum: ['Analogy', 'Code Snippet', 'Case Study', 'General'],
+    default: 'Analogy'
+  },
   relatedTopics: [{
-    type: String // We use strings for tags for now (e.g. "Java OOP", "Python OOP", "Classes")
+    type: String
   }]
 }, { timestamps: true });
 

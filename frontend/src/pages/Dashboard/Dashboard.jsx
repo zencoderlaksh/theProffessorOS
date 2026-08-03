@@ -1,57 +1,82 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Clock, Pin, Edit3, PlayCircle, PlusCircle, Code, Database, BookOpen, FileText, Calendar, CloudLightning } from 'lucide-react';
+import { 
+  Search, Clock, Pin, Edit3, PlayCircle, PlusCircle, Code, Database, 
+  BookOpen, FileText, Calendar, CloudLightning, CheckSquare, Square, 
+  Plus, TrendingUp, Cpu, ClipboardList, HelpCircle, ArrowRight, Folder, Award
+} from 'lucide-react';
 import { motion } from 'framer-motion';
-import styles from './Dashboard.module.css';
+import axios from 'axios';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
-    totalSubjects: 0,
-    totalTopics: 0,
-    totalNotes: 0,
+    totalCourses: 0,
+    totalLessons: 0,
+    totalAssignments: 0,
     totalExamples: 0,
-    totalCodeSnippets: 0,
-    totalAssignments: 0
+    recentLessons: [],
+    recentAssignments: []
   });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-
   const [aiAnswer, setAiAnswer] = useState(null);
 
+  // Professor's Daily Checklist State
+  const [todos, setTodos] = useState(() => {
+    const saved = localStorage.getItem('professor_todos');
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: 1, text: 'Review & grade MERN assignment submissions', done: false },
+      { id: 2, text: 'Prepare slide deck for tomorrow\'s Data Structures lecture', done: true },
+      { id: 3, text: 'Check latest AI breakthrough tools in AI Radar', done: false },
+      { id: 4, text: 'Upload new reference PDF in Lesson Builder', done: false }
+    ];
+  });
+  const [newTodoText, setNewTodoText] = useState('');
+
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/stats');
-        if (response.ok) {
-          const data = await response.json();
-          setStats(data);
-        }
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      }
-    };
     fetchStats();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('professor_todos', JSON.stringify(todos));
+  }, [todos]);
+
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/stats');
+      setStats(res.data);
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+    }
+  };
+
+  const toggleTodo = (id) => {
+    setTodos(todos.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  };
+
+  const addTodo = (e) => {
+    e.preventDefault();
+    if (!newTodoText.trim()) return;
+    setTodos([...todos, { id: Date.now(), text: newTodoText.trim(), done: false }]);
+    setNewTodoText('');
+  };
+
+  const deleteTodo = (id) => {
+    setTodos(todos.filter(t => t.id !== id));
+  };
 
   const handleSearch = async (e) => {
     const q = e.target.value;
     setSearchQuery(q);
 
     if (q.trim().length > 2) {
-      // Trigger Semantic Search dynamically
       setIsSearching(true);
       try {
-        const res = await fetch('http://localhost:5000/api/search/semantic', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: q })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setSearchResults(data.results || []);
-        }
+        const res = await axios.post('http://localhost:5000/api/search/semantic', { query: q });
+        setSearchResults(res.data.results || []);
       } catch (err) {
         console.error('Semantic search error', err);
       } finally {
@@ -68,16 +93,9 @@ export default function Dashboard() {
       setAiAnswer(null);
       setSearchResults([]);
       try {
-        const res = await fetch('http://localhost:5000/api/search/ask', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: searchQuery })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setAiAnswer(data.answer);
-          setSearchResults(data.sources || []);
-        }
+        const res = await axios.post('http://localhost:5000/api/search/ask', { query: searchQuery });
+        setAiAnswer(res.data.answer);
+        setSearchResults(res.data.sources || []);
       } catch (err) {
         console.error('Ask AI error', err);
       } finally {
@@ -86,241 +104,288 @@ export default function Dashboard() {
     }
   };
 
-  const handleBackup = async () => {
-    try {
-      const res = await fetch('http://localhost:5000/api/backup/export');
-      if (res.ok) {
-        alert("Backup generated successfully! (Mocked download)");
-      }
-    } catch (err) {
-      console.error('Backup error', err);
-    }
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1 }
-  };
-
   return (
-    <div className={styles.dashboardContainer}>
-      <header className={styles.header}>
-        <motion.h1 
-          className={`${styles.title} text-gradient`}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-        >
-          ProfessorOS
-        </motion.h1>
-        
-        <div className="flex gap-4 items-center flex-1 max-w-2xl mx-8 relative">
-          <motion.div 
-            className="w-full relative"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center bg-[#0a0a0a] border border-[#494949] rounded-full px-6 py-4 focus-within:border-[#FF5D73] transition-all shadow-lg w-full">
-              <Search size={24} className="text-[#7C7A7A] mr-3" />
-              <input 
-                type="text" 
-                value={searchQuery}
-                onChange={handleSearch}
-                onKeyDown={handleAskAI}
-                placeholder="Ask AI: 'Explain recursion with a real-world example' (Press Enter)"
-                className="bg-transparent border-none outline-none text-[#FFFFFF] w-full placeholder-[#7C7A7A] text-base"
-              />
-            </div>
-            {(isSearching || aiAnswer || searchResults.length > 0) && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-[#0a0a0a] border border-[#494949] rounded-xl shadow-2xl z-50 max-h-[32rem] overflow-y-auto">
-                {isSearching ? (
-                  <div className="p-6 text-base text-[#7C7A7A] text-center flex justify-center items-center gap-3">
-                    <CloudLightning className="animate-pulse text-[#FF5D73]" /> Thinking...
-                  </div>
-                ) : (
-                  <div className="p-6">
-                    {aiAnswer && (
-                      <div className="mb-6 pb-6 border-b border-[#494949]">
-                        <h3 className="text-sm font-semibold text-[#FF5D73] uppercase tracking-wider mb-3">AI Response</h3>
-                        <p className="text-[#FFFFFF] text-base leading-relaxed whitespace-pre-wrap">{aiAnswer}</p>
-                      </div>
-                    )}
-                    
-                    {searchResults.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-[#7C7A7A] uppercase tracking-wider mb-3">Retrieved from Knowledge Base</h3>
-                        <div className="space-y-3">
-                          {searchResults.map((result, idx) => (
-                            <div key={idx} className="p-4 border border-[#494949] rounded-lg bg-[#141414] hover:border-[#FF5D73] transition-colors">
-                              <div className="flex items-center gap-3 mb-2">
-                                <span className="text-xs font-semibold px-2 py-1 rounded bg-[#0a0a0a] text-[#FF5D73] border border-[#FF5D73]/30">{result.type}</span>
-                                <span className="text-base text-[#FFFFFF] font-medium">{result.title}</span>
-                              </div>
-                              <p className="text-sm text-[#7C7A7A] line-clamp-2">{result.content}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </motion.div>
+    <div className="min-h-screen p-4 sm:p-6 md:p-8 max-w-7xl mx-auto text-white space-y-8">
+      {/* Top Banner Greeting */}
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[#222]">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#FF5D73] uppercase tracking-wider mb-1">
+            <span className="w-2 h-2 rounded-full bg-[#FF5D73] animate-ping" /> Professor Dashboard
+          </div>
+          <h1 className="text-4xl font-bold tracking-tight text-white">
+            Welcome back, Professor! 🎓
+          </h1>
+          <p className="text-sm text-[#7C7A7A] mt-1">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <button onClick={handleBackup} className="px-5 py-3 bg-[#141414] hover:bg-[#494949] text-[#FFFFFF] text-base rounded-xl border border-[#494949] transition-colors flex items-center gap-2">
-            <CloudLightning size={20} /> Backup System
-          </button>
-          <Link to="/lesson-builder" className="flex items-center gap-2 px-6 py-3 bg-[#FF5D73] hover:bg-[#ff405b] text-white rounded-xl font-medium transition-colors shadow-lg shadow-[#FF5D73]/20">
-            <PlusCircle size={22} /> Lesson Builder
-          </Link>
+        {/* Global Search Bar */}
+        <div className="flex-1 max-w-xl relative">
+          <div className="flex items-center bg-[#0a0a0a] border border-[#333] focus-within:border-[#FF5D73] rounded-2xl px-4 py-3 transition-all shadow-lg">
+            <Search size={18} className="text-[#7C7A7A] mr-3 shrink-0" />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={handleSearch}
+              onKeyDown={handleAskAI}
+              placeholder="Search across courses or Ask AI (Press Enter)..."
+              className="bg-transparent border-none outline-none text-white w-full placeholder-[#555] text-xs font-medium"
+            />
+          </div>
+
+          {/* AI Answer & Search Results Modal Popup */}
+          {(isSearching || aiAnswer || searchResults.length > 0) && (
+            <div className="absolute top-full left-0 right-0 mt-3 bg-[#0a0a0a] border border-[#333] rounded-2xl shadow-2xl z-50 p-6 max-h-[30rem] overflow-y-auto custom-scrollbar">
+              {isSearching ? (
+                <div className="text-xs text-[#7C7A7A] text-center flex justify-center items-center gap-2 py-4">
+                  <CloudLightning className="animate-pulse text-[#FF5D73]" size={18} /> Scanning Knowledge Base...
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {aiAnswer && (
+                    <div className="pb-4 border-b border-[#222]">
+                      <h3 className="text-xs font-semibold text-[#FF5D73] uppercase tracking-wider mb-2">AI Response</h3>
+                      <p className="text-xs text-[#E0E0E0] leading-relaxed whitespace-pre-wrap">{aiAnswer}</p>
+                    </div>
+                  )}
+
+                  {searchResults.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold text-[#7C7A7A] uppercase tracking-wider mb-2">Matching Sources</h3>
+                      <div className="space-y-2">
+                        {searchResults.map((result, idx) => (
+                          <div key={idx} className="p-3 border border-[#222] rounded-xl bg-[#141414]">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#FF5D73]/10 text-[#FF5D73]">
+                                {result.type}
+                              </span>
+                              <span className="text-xs text-white font-semibold">{result.title}</span>
+                            </div>
+                            <p className="text-xs text-[#7C7A7A] line-clamp-2">{result.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
-      <motion.div 
-        className={styles.statsGrid}
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {[
-          { label: 'Total Subjects', value: stats.totalSubjects },
-          { label: 'Total Topics', value: stats.totalTopics },
-          { label: 'Total Notes', value: stats.totalNotes },
-          { label: 'Total Examples', value: stats.totalExamples },
-          { label: 'Code Snippets', value: stats.totalCodeSnippets },
-          { label: 'Assignments', value: stats.totalAssignments },
-        ].map((stat, idx) => (
-          <motion.div key={idx} className={`${styles.statCard} glass-panel`} variants={itemVariants}>
-            <span className={styles.statValue}>{stat.value}</span>
-            <span className={styles.statLabel}>{stat.label}</span>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      <motion.section 
-        className="my-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <h2 className="text-2xl font-bold text-[#FFFFFF] mb-8 flex items-center gap-3">
-          <Database size={24} className="text-[#FF5D73]" />
-          Knowledge Hub Builders
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-          <Link to="/example-repository" className="flex flex-col items-center p-6 bg-[#0a0a0a] hover:bg-[#141414] border border-[#494949] hover:border-[#FF5D73] rounded-xl transition-all text-center group">
-            <Database size={28} className="text-[#7C7A7A] group-hover:text-[#FF5D73] mb-3 transition-colors" />
-            <span className="text-sm font-medium text-[#FFFFFF]">Examples</span>
-          </Link>
-          <Link to="/code-playground" className="flex flex-col items-center p-6 bg-[#0a0a0a] hover:bg-[#141414] border border-[#494949] hover:border-[#FF5D73] rounded-xl transition-all text-center group">
-            <Code size={28} className="text-[#7C7A7A] group-hover:text-[#FF5D73] mb-3 transition-colors" />
-            <span className="text-sm font-medium text-[#FFFFFF]">Playground</span>
-          </Link>
-          <Link to="/analogy-repository" className="flex flex-col items-center p-6 bg-[#0a0a0a] hover:bg-[#141414] border border-[#494949] hover:border-[#FF5D73] rounded-xl transition-all text-center group">
-            <span className="text-[#7C7A7A] group-hover:text-[#FF5D73] mb-3 text-3xl transition-colors">💡</span>
-            <span className="text-sm font-medium text-[#FFFFFF]">Analogies</span>
-          </Link>
-          <Link to="/diagram-repository" className="flex flex-col items-center p-6 bg-[#0a0a0a] hover:bg-[#141414] border border-[#494949] hover:border-[#FF5D73] rounded-xl transition-all text-center group">
-            <span className="text-[#7C7A7A] group-hover:text-[#FF5D73] mb-3 text-3xl transition-colors">🖼️</span>
-            <span className="text-sm font-medium text-[#FFFFFF]">Diagrams</span>
-          </Link>
-          <Link to="/assignment-builder" className="flex flex-col items-center p-6 bg-[#0a0a0a] hover:bg-[#141414] border border-[#494949] hover:border-[#FF5D73] rounded-xl transition-all text-center group">
-            <span className="text-[#7C7A7A] group-hover:text-[#FF5D73] mb-3 text-3xl transition-colors">📝</span>
-            <span className="text-sm font-medium text-[#FFFFFF]">Assignments</span>
-          </Link>
-          <Link to="/question-bank" className="flex flex-col items-center p-6 bg-[#0a0a0a] hover:bg-[#141414] border border-[#494949] hover:border-[#FF5D73] rounded-xl transition-all text-center group">
-            <span className="text-[#7C7A7A] group-hover:text-[#FF5D73] mb-3 text-3xl transition-colors">❓</span>
-            <span className="text-sm font-medium text-[#FFFFFF]">Questions</span>
-          </Link>
-          <Link to="/project-repository" className="flex flex-col items-center p-6 bg-[#0a0a0a] hover:bg-[#141414] border border-[#494949] hover:border-[#FF5D73] rounded-xl transition-all text-center group">
-            <span className="text-[#7C7A7A] group-hover:text-[#FF5D73] mb-3 text-3xl transition-colors">💼</span>
-            <span className="text-sm font-medium text-[#FFFFFF]">Projects</span>
-          </Link>
-          <Link to="/resource-library" className="flex flex-col items-center p-6 bg-[#0a0a0a] hover:bg-[#141414] border border-[#494949] hover:border-[#FF5D73] rounded-xl transition-all text-center group">
-            <BookOpen size={28} className="text-[#7C7A7A] group-hover:text-[#FF5D73] mb-3 transition-colors" />
-            <span className="text-sm font-medium text-[#FFFFFF]">Resources</span>
-          </Link>
-          <Link to="/teaching-notes" className="flex flex-col items-center p-6 bg-[#0a0a0a] hover:bg-[#141414] border border-[#494949] hover:border-[#FF5D73] rounded-xl transition-all text-center group">
-            <FileText size={28} className="text-[#7C7A7A] group-hover:text-[#FF5D73] mb-3 transition-colors" />
-            <span className="text-sm font-medium text-[#FFFFFF]">Private Notes</span>
-          </Link>
-          <Link to="/lecture-planner" className="flex flex-col items-center p-6 bg-[#0a0a0a] hover:bg-[#141414] border border-[#494949] hover:border-[#FF5D73] rounded-xl transition-all text-center group">
-            <Calendar size={28} className="text-[#7C7A7A] group-hover:text-[#FF5D73] mb-3 transition-colors" />
-            <span className="text-sm font-medium text-[#FFFFFF]">Lecture Plan</span>
-          </Link>
+      {/* Live Real-time Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="glass-panel p-6 rounded-3xl border border-[#222] bg-[#0a0a0a]/90 flex flex-col justify-between hover:border-[#FF5D73]/40 transition-all">
+          <div className="flex items-center justify-between text-[#7C7A7A] mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider">Active Courses</span>
+            <Folder size={20} className="text-[#FF5D73]" />
+          </div>
+          <div className="text-4xl font-extrabold text-white tracking-tight">{stats.totalCourses || 0}</div>
+          <span className="text-[11px] text-[#555] mt-2">Custom Course Repositories</span>
         </div>
-      </motion.section>
 
-      <div className={styles.sectionsGrid}>
-        <motion.section 
-          className={`${styles.section} glass-panel`}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <h2 className={styles.sectionTitle}>
-            <Clock size={22} className="text-gradient" />
-            Recent Activity
-          </h2>
-          <div className="flex flex-col gap-3 mt-4">
-            <ul className="space-y-4">
-              <li className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-[#494949] cursor-pointer hover:border-[#FF5D73] transition-colors">
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-semibold px-2 py-1 rounded bg-[#141414] text-[#FFFFFF] border border-[#494949]">Edited</span>
-                  <span className="text-[#FFFFFF] text-base font-medium">React Component Lifecycle</span>
-                </div>
-                <span className="text-[#7C7A7A] text-sm">2 mins ago</span>
-              </li>
-              <li className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-[#494949] cursor-pointer hover:border-[#FF5D73] transition-colors">
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-semibold px-2 py-1 rounded bg-[#FF5D73]/10 text-[#FF5D73] border border-[#FF5D73]/30">Added</span>
-                  <span className="text-[#FFFFFF] text-base font-medium">Library Management Example</span>
-                </div>
-                <span className="text-[#7C7A7A] text-sm">1 hour ago</span>
-              </li>
-            </ul>
+        <div className="glass-panel p-6 rounded-3xl border border-[#222] bg-[#0a0a0a]/90 flex flex-col justify-between hover:border-[#FF5D73]/40 transition-all">
+          <div className="flex items-center justify-between text-[#7C7A7A] mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider">Saved Lessons</span>
+            <BookOpen size={20} className="text-[#FF5D73]" />
           </div>
-        </motion.section>
+          <div className="text-4xl font-extrabold text-white tracking-tight">{stats.totalLessons || 0}</div>
+          <span className="text-[11px] text-[#555] mt-2">PDFs & Lecture Content</span>
+        </div>
 
-        <motion.section 
-          className={`${styles.section} glass-panel`}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <div className={styles.sectionHeader}>
-            <h2 className="text-xl font-semibold text-[#FFFFFF] flex items-center gap-2">
-              <Pin size={22} className="text-[#FF5D73]" />
-              Pinned Items
+        <div className="glass-panel p-6 rounded-3xl border border-[#222] bg-[#0a0a0a]/90 flex flex-col justify-between hover:border-[#FF5D73]/40 transition-all">
+          <div className="flex items-center justify-between text-[#7C7A7A] mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider">Assignments</span>
+            <ClipboardList size={20} className="text-[#FF5D73]" />
+          </div>
+          <div className="text-4xl font-extrabold text-white tracking-tight">{stats.totalAssignments || 0}</div>
+          <span className="text-[11px] text-[#555] mt-2">Tests, Labs & Theory</span>
+        </div>
+
+        <div className="glass-panel p-6 rounded-3xl border border-[#222] bg-[#0a0a0a]/90 flex flex-col justify-between hover:border-[#FF5D73]/40 transition-all">
+          <div className="flex items-center justify-between text-[#7C7A7A] mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider">Knowledge Items</span>
+            <Database size={20} className="text-[#FF5D73]" />
+          </div>
+          <div className="text-4xl font-extrabold text-white tracking-tight">{stats.totalExamples || 0}</div>
+          <span className="text-[11px] text-[#555] mt-2">Examples & AI Analogies</span>
+        </div>
+      </div>
+
+      {/* Main Grid: Pending Action Items + Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Left Column: Professor's Daily Action Checklist (7 cols) */}
+        <div className="lg:col-span-7 space-y-6">
+          <div className="glass-panel p-6 rounded-3xl border border-[#222] bg-[#0a0a0a]/90 shadow-2xl">
+            <div className="flex items-center justify-between mb-4 border-b border-[#222] pb-3">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <CheckSquare size={20} className="text-[#FF5D73]" />
+                Today's Action Items & Reminders
+              </h2>
+              <span className="text-xs text-[#7C7A7A]">
+                {todos.filter(t => t.done).length} / {todos.length} Done
+              </span>
+            </div>
+
+            {/* Todo Input */}
+            <form onSubmit={addTodo} className="flex gap-2 mb-4">
+              <input
+                type="text"
+                placeholder="Add a new teaching reminder or action item..."
+                value={newTodoText}
+                onChange={(e) => setNewTodoText(e.target.value)}
+                className="flex-1 bg-[#141414] border border-[#333] rounded-xl px-4 py-2.5 text-xs text-white placeholder-[#555] focus:outline-none focus:border-[#FF5D73]"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2.5 bg-[#FF5D73] hover:bg-[#ff405b] text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-1"
+              >
+                <Plus size={16} /> Add
+              </button>
+            </form>
+
+            {/* Todo List */}
+            <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
+              {todos.map(todo => (
+                <div
+                  key={todo.id}
+                  className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+                    todo.done 
+                      ? 'bg-[#0f0f0f] border-[#222] opacity-60' 
+                      : 'bg-[#141414] border-[#222] hover:border-[#FF5D73]/30'
+                  }`}
+                >
+                  <button
+                    onClick={() => toggleTodo(todo.id)}
+                    className="flex items-center gap-3 text-left flex-1"
+                  >
+                    <span className={todo.done ? 'text-[#FF5D73]' : 'text-[#555]'}>
+                      {todo.done ? <CheckSquare size={18} /> : <Square size={18} />}
+                    </span>
+                    <span className={`text-xs font-medium ${todo.done ? 'line-through text-[#7C7A7A]' : 'text-white'}`}>
+                      {todo.text}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => deleteTodo(todo.id)}
+                    className="text-[#555] hover:text-red-400 text-xs px-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Launch Tools Grid */}
+          <div className="glass-panel p-6 rounded-3xl border border-[#222] bg-[#0a0a0a]/90 shadow-2xl">
+            <h2 className="text-base font-bold text-white mb-4 border-b border-[#222] pb-3">
+              🚀 Quick Workspace Launchers
             </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Link to="/lesson-builder" className="p-3.5 bg-[#141414] hover:bg-[#1e1e1e] border border-[#222] rounded-2xl flex flex-col items-center text-center transition-all group">
+                <BookOpen size={22} className="text-[#FF5D73] mb-2 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-semibold text-white">Lesson Builder</span>
+              </Link>
+
+              <Link to="/lecture-flow" className="p-3.5 bg-[#141414] hover:bg-[#1e1e1e] border border-[#222] rounded-2xl flex flex-col items-center text-center transition-all group">
+                <PlayCircle size={22} className="text-amber-400 mb-2 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-semibold text-white">Lecture Flow</span>
+              </Link>
+
+              <Link to="/assignment-builder" className="p-3.5 bg-[#141414] hover:bg-[#1e1e1e] border border-[#222] rounded-2xl flex flex-col items-center text-center transition-all group">
+                <ClipboardList size={22} className="text-blue-400 mb-2 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-semibold text-white">Assignments</span>
+              </Link>
+
+              <Link to="/personal-growth" className="p-3.5 bg-[#141414] hover:bg-[#1e1e1e] border border-[#222] rounded-2xl flex flex-col items-center text-center transition-all group">
+                <TrendingUp size={22} className="text-emerald-400 mb-2 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-semibold text-white">Growth Feed</span>
+              </Link>
+            </div>
           </div>
-          <div className={styles.sectionContent}>
-            <ul className="space-y-4">
-              <li className="flex items-center gap-4 p-4 bg-[#0a0a0a] rounded-xl border border-[#494949] cursor-pointer hover:border-[#FF5D73] transition-colors">
-                <span className="text-[#FF5D73] text-xl">💡</span>
-                <span className="text-[#FFFFFF] text-base font-medium">React State (Whiteboard)</span>
-              </li>
-              <li className="flex items-center gap-4 p-4 bg-[#0a0a0a] rounded-xl border border-[#494949] cursor-pointer hover:border-[#FF5D73] transition-colors">
-                <span className="text-[#FF5D73] text-xl">📝</span>
-                <span className="text-[#FFFFFF] text-base font-medium">Build a Todo App</span>
-              </li>
-              <li className="flex items-center gap-4 p-4 bg-[#0a0a0a] rounded-xl border border-[#494949] cursor-pointer hover:border-[#FF5D73] transition-colors">
-                <span className="text-[#FF5D73] text-xl">🗄️</span>
-                <span className="text-[#FFFFFF] text-base font-medium">ATM Example</span>
-              </li>
-            </ul>
+        </div>
+
+        {/* Right Column: Real DB Live Recent Activity Feed (5 cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="glass-panel p-6 rounded-3xl border border-[#222] bg-[#0a0a0a]/90 shadow-2xl">
+            <h2 className="text-base font-bold text-white mb-4 flex items-center justify-between border-b border-[#222] pb-3">
+              <span className="flex items-center gap-2">
+                <Clock size={18} className="text-[#FF5D73]" /> Recent Lessons & PDFs
+              </span>
+              <Link to="/lesson-builder" className="text-xs text-[#FF5D73] hover:underline flex items-center gap-1">
+                View All <ArrowRight size={12} />
+              </Link>
+            </h2>
+
+            {stats.recentLessons && stats.recentLessons.length > 0 ? (
+              <div className="space-y-3">
+                {stats.recentLessons.map(lesson => (
+                  <div key={lesson._id} className="p-3.5 bg-[#141414] border border-[#222] rounded-2xl flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-white truncate max-w-[200px]">{lesson.title}</div>
+                      <div className="text-[10px] text-[#7C7A7A] mt-0.5">
+                        Course: {lesson.courseId?.name || 'General'}
+                      </div>
+                    </div>
+                    {lesson.fileUrl && (
+                      <a
+                        href={`http://localhost:5000${lesson.fileUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1 bg-[#1e1e1e] border border-[#333] text-[10px] text-[#FF5D73] font-semibold rounded-lg hover:bg-[#FF5D73] hover:text-white transition-all"
+                      >
+                        View PDF
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-xs text-[#555]">
+                No lessons uploaded yet. Add PDFs in Lesson Builder!
+              </div>
+            )}
           </div>
-        </motion.section>
+
+          <div className="glass-panel p-6 rounded-3xl border border-[#222] bg-[#0a0a0a]/90 shadow-2xl">
+            <h2 className="text-base font-bold text-white mb-4 flex items-center justify-between border-b border-[#222] pb-3">
+              <span className="flex items-center gap-2">
+                <Award size={18} className="text-amber-400" /> Recent Assignments
+              </span>
+              <Link to="/assignment-builder" className="text-xs text-[#FF5D73] hover:underline flex items-center gap-1">
+                Builder <ArrowRight size={12} />
+              </Link>
+            </h2>
+
+            {stats.recentAssignments && stats.recentAssignments.length > 0 ? (
+              <div className="space-y-3">
+                {stats.recentAssignments.map(asgn => (
+                  <div key={asgn._id} className="p-3.5 bg-[#141414] border border-[#222] rounded-2xl flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-white truncate max-w-[200px]">{asgn.title}</div>
+                      <div className="text-[10px] text-[#7C7A7A] mt-0.5">
+                        {asgn.type} • {asgn.totalMarks || 50} Marks
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[#FF5D73]/10 text-[#FF5D73]">
+                      {asgn.difficulty}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-xs text-[#555]">
+                No assignments saved yet. Create one in Assignment Builder!
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );

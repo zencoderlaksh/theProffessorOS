@@ -14,7 +14,8 @@ export default function CodePlayground() {
       dryRun: '',
       isEditable: false,
       allowDownload: true,
-      allowCopy: true
+      allowCopy: true,
+      actualOutput: ''
     }
   ]);
   const [saved, setSaved] = useState(false);
@@ -38,7 +39,8 @@ export default function CodePlayground() {
         dryRun: '',
         isEditable: false,
         allowDownload: true,
-        allowCopy: true
+        allowCopy: true,
+        actualOutput: ''
       }
     ]);
   };
@@ -60,6 +62,31 @@ export default function CodePlayground() {
       }
     } catch (err) {
       console.error('Error saving snippet:', err);
+    }
+  };
+
+  const runSnippet = (index) => {
+    const snippet = snippets[index];
+    if (snippet.language !== 'javascript') {
+      handleSnippetChange(index, 'actualOutput', `Execution for ${snippet.language} is not supported in this demo. Try JavaScript.`);
+      return;
+    }
+
+    let logs = [];
+    const originalConsoleLog = console.log;
+    console.log = (...args) => {
+      logs.push(args.join(' '));
+    };
+
+    try {
+      // eslint-disable-next-line no-new-func
+      const fn = new Function(snippet.code);
+      fn();
+      handleSnippetChange(index, 'actualOutput', logs.join('\n') || 'Code executed successfully with no output.');
+    } catch (err) {
+      handleSnippetChange(index, 'actualOutput', `Error: ${err.message}`);
+    } finally {
+      console.log = originalConsoleLog;
     }
   };
 
@@ -136,13 +163,27 @@ export default function CodePlayground() {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-300 mb-2">Code Snippet</label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-slate-300">Code Snippet</label>
+                <button 
+                  onClick={() => runSnippet(idx)}
+                  className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-bold transition-colors shadow shadow-green-500/20"
+                >
+                  ▶ Run Code
+                </button>
+              </div>
               <textarea
                 value={snippet.code}
                 onChange={(e) => handleSnippetChange(idx, 'code', e.target.value)}
                 placeholder="Write your code here..."
                 className="w-full min-h-[200px] p-4 bg-[#0d1117] border border-slate-700 rounded-lg text-green-400 font-mono text-sm placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-all resize-y"
               />
+              {snippet.actualOutput && (
+                <div className="mt-4 p-3 bg-black border border-slate-800 rounded-lg">
+                  <span className="text-xs text-slate-500 uppercase font-bold mb-1 block">Output</span>
+                  <pre className="text-slate-300 font-mono text-sm whitespace-pre-wrap">{snippet.actualOutput}</pre>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-6 mb-6">

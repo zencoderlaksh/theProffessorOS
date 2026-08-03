@@ -13,6 +13,19 @@ const assignmentSchema = new mongoose.Schema({
     default: 'Medium'
   },
   content: { type: String, required: true },
+  courseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course',
+    required: false
+  },
+  totalMarks: {
+    type: Number,
+    default: 50
+  },
+  dueDate: {
+    type: String,
+    default: ''
+  },
   relatedTopics: [{ type: String }]
 }, { timestamps: true });
 
